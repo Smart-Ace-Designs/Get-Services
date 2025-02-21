@@ -6,6 +6,8 @@ This repository contains all files required to build the **Get-Services** Script
 ## Purpose
 The **Get-Services** script launches a Windows form that provides a means to list all current services installed on the local computer in a data grid with sortable columns.  It is meant to provide an example of how to use a data grid for more meaningful purposes.
 
+![Screenshot 2025-02-21 123653](https://github.com/user-attachments/assets/9224134f-e6ca-4fab-bd5a-d1290616871b)
+
 ## Requirements
 - This project supports the following command shells:
     - [Windows PowerShell 5.1](https://docs.microsoft.com/en-us/powershell/scripting/overview?view=powershell-5.1)
