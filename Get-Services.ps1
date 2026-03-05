@@ -94,6 +94,36 @@ $ShowFormMain =
 }
 #endregion
 
+#region Functions
+function Invoke-FormAction
+{
+    param
+    (
+        [Parameter(Mandatory, Position = 0)] [ScriptBlock]$Action,
+        [Parameter(Position = 1)] [ScriptBlock]$Reset = $null
+    )
+
+    try
+    {
+        $ToolStripStatusLabelMain.Text = "Working...please wait"
+        $FormMain.Controls | Where-Object {$PSItem -isnot [System.Windows.Forms.StatusStrip]} | ForEach-Object {$PSItem.Enabled = $false}
+        $FormMain.Cursor = [System.Windows.Forms.Cursors]::WaitCursor
+        [System.Windows.Forms.Application]::DoEvents()
+
+        & $Action
+    }
+    
+    finally
+    {
+        $FormMain.Controls | ForEach-Object {$PSItem.Enabled = $true}
+        $FormMain.ResetCursor()
+        if ($Reset) {& $Reset}
+        $ToolStripStatusLabelMain.Text = "Ready"
+        $StatusStripMain.Update()
+    }
+}
+#endregion
+
 #region Handlers
 $FormMain_Shown =
 {
@@ -104,59 +134,51 @@ $FormMain_Shown =
 
 $ButtonRun_Click = 
 {
-    $ToolStripStatusLabelMain.Text = "Working...please wait"
-    $FormMain.Controls | Where-Object {$PSItem -isnot [System.Windows.Forms.StatusStrip]} | ForEach-Object {$PSItem.Enabled = $false}
-    $FormMain.Cursor = [System.Windows.Forms.Cursors]::WaitCursor
-    [System.Windows.Forms.Application]::DoEvents()
-
-    try
-    {
-        $Services = Get-Service -ErrorAction SilentlyContinue | Select-Object DisplayName, Status | Sort-Object DisplayName
-        if ($Services)
+    Invoke-FormAction -Action {
+        try
         {
-            $DataGridViewServices.ColumnCount = 2
-            $DataGridViewServices.ColumnHeadersVisible = $true
-            $DataGridViewServices.Columns[0].Name = "Service Name"
-            $DataGridViewServices.Columns[1].Name = "Status"
-
-            $DataGridViewServices.Rows.Clear()
-            $Services | ForEach-Object {$DataGridViewServices.Rows.Add($PSItem.DisplayName, $PSItem.Status)}
-            
-            $ColumnCount = $DataGridViewServices.Columns.Count
-            $LastColumnIndex = $ColumnCount - 1
-            foreach ($Column in $DataGridViewServices.Columns)
+            $Services = Get-Service -ErrorAction SilentlyContinue | Select-Object DisplayName, Status | Sort-Object DisplayName
+            if ($Services)
             {
-                if ($Column.Index -eq $ColumnCount - $LastColumnIndex) {$Column.AutoSizeMode = [System.Windows.Forms.DataGridViewAutoSizeColumnMode]::Fill}
-                else {$Column.AutoSizeMode = [System.Windows.Forms.DataGridViewAutoSizeColumnMode]::AllCells}
+                $DataGridViewServices.ColumnCount = 2
+                $DataGridViewServices.ColumnHeadersVisible = $true
+                $DataGridViewServices.Columns[0].Name = "Service Name"
+                $DataGridViewServices.Columns[1].Name = "Status"
 
-                $Column.SortMode = [System.Windows.Forms.DataGridViewColumnSortMode]::NotSortable
-                $Column.SortMode = [System.Windows.Forms.DataGridViewColumnSortMode]::Automatic
+                $DataGridViewServices.Rows.Clear()
+                $Services | ForEach-Object {$DataGridViewServices.Rows.Add($PSItem.DisplayName, $PSItem.Status)}
+                
+                $ColumnCount = $DataGridViewServices.Columns.Count
+                $LastColumnIndex = $ColumnCount - 1
+                foreach ($Column in $DataGridViewServices.Columns)
+                {
+                    if ($Column.Index -eq $ColumnCount - $LastColumnIndex) {$Column.AutoSizeMode = [System.Windows.Forms.DataGridViewAutoSizeColumnMode]::Fill}
+                    else {$Column.AutoSizeMode = [System.Windows.Forms.DataGridViewAutoSizeColumnMode]::AllCells}
+
+                    $Column.SortMode = [System.Windows.Forms.DataGridViewColumnSortMode]::NotSortable
+                    $Column.SortMode = [System.Windows.Forms.DataGridViewColumnSortMode]::Automatic
+                }
+                $FormMain.Refresh()
             }
-            $FormMain.Refresh()
+            else
+            {
+                [void][System.Windows.Forms.MessageBox]::Show(
+                    "No services found on this computer.",
+                    "Information",
+                    [System.Windows.Forms.MessageBoxButtons]::OK,
+                    [System.Windows.Forms.MessageBoxIcon]::Information)
+            }
         }
-        else
+        catch
         {
             [void][System.Windows.Forms.MessageBox]::Show(
-                "No services found on this computer.",
-                "Information",
+                $PSItem.Exception.Message + "`n`nPlease contact $SUPPORT_CONTACT for technical support.",
+                "Exception",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Information)
+                [System.Windows.Forms.MessageBoxIcon]::Warning
+            )
         }
     }
-    catch
-    {
-        [void][System.Windows.Forms.MessageBox]::Show(
-            $PSItem.Exception.Message + "`n`nPlease contact $SUPPORT_CONTACT for technical support.",
-            "Exception",
-            [System.Windows.Forms.MessageBoxButtons]::OK,
-            [System.Windows.Forms.MessageBoxIcon]::Warning
-        )
-    }
-
-    $FormMain.Controls | ForEach-Object {$PSItem.Enabled = $true}
-    $FormMain.ResetCursor()
-    $ToolStripStatusLabelMain.Text = "Ready"
-    $StatusStripMain.Update()
 }
 #endregion
 
